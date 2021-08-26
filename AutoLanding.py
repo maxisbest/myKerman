@@ -4,7 +4,7 @@ import sys
 import math
 
 
-logFile = open('D:/Mod/kRPC_py/missionLog.txt', 'a+', encoding='utf-8')
+logFile = open('missionLog.txt', 'a+', encoding='utf-8')
 logConsole = sys.stdout
 sys.stdout = logFile
 
