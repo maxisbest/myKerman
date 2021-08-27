@@ -1,13 +1,6 @@
 import krpc
 import time
 import sys
-import math
-
-
-# conn = krpc.connect(name='')
-# vessel = conn.space_center.active_vessel
-# ctrl = vessel.control
-# ap = vessel.auto_pilot
 
 
 def printTime(str):
@@ -47,14 +40,10 @@ def printStructure():
         for i in experiment_parts:
             print(i.name)
 
-    vessel_height = conn.add_stream(getattr, vessel.flight(), 'surface_altitude')
-    print('Height of the vessel \'s center of mass:')
-    print('{:.2f}'.format(vessel_height()))
-
     conn.close()
 
 
-def Launch(sec):
+def Launch(sec: int):
     '''
     Launch this vessel after seconds.
     '''
@@ -65,7 +54,7 @@ def Launch(sec):
         sec = 1
     time.sleep(sec)
     printTime('Launch Countdown')
-    time.sleep(3)
+    time.sleep(1)
 
     ctrl.sas = False
     ctrl.rcs = False
@@ -83,11 +72,34 @@ def Launch(sec):
 
     conn.close()
 
+
+def findEngine(vessel):
+    '''
+    Returns a list of all engines on given vessel.
+    '''
+    par = []
+    for i in vessel.parts.all:
+        if i.engine:
+            par.append(i)
+    return par
+
+
+def findDecoupler(vessel):
+    '''
+    Returns a list of all decouplers on given vessel.
+    '''
+    par = []
+    for i in vessel.parts.all:
+        if i.decoupler:
+            par.append(i)
+    return par
+
+
 def CoM_adj(vessel):
     '''
-    Calculates the center of mass adjustment of the given vessel. Returns a float of distance between the CoM of the vessel and the bottom of stage 0 part.
+    Calculates the center of mass adjustment of the given vessel. Returns a float of distance between the CoM of the vessel and the first engine in part tree.
     '''
-    bottom = vessel.parts.in_stage(0)[0]
-    box = bottom.bounding_box(vessel.reference_frame)
+    eng = findEngine(vessel)
+    box = eng[0].bounding_box(vessel.reference_frame)
     dist = abs(box[0][1])
     return dist

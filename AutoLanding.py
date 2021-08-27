@@ -1,18 +1,18 @@
 import krpc
 import time
 import math
+import threading
 
-from basic import printTime, CoM_adj
+from basic import printTime, CoM_adj, findDecoupler
 
-def AutoLanding(tolerance_coef: float = 1.1):
+def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     '''
     Automatically lands the active vessel with a tolerance coef.
     '''
     
-    printTime('AutoLanding ready. Coefficient of tolerance set to {:.4f}'.format(tolerance_coef))
+    printTime(Name + ' AutoLanding ready. Coefficient of tolerance set to {:.4f}'.format(tolerance_coef))
 
-    conn = krpc.connect(name='AutoLanding')
-    vessel = conn.space_center.active_vessel
+    conn = krpc.connect(name=Name)
     ctrl = vessel.control
     ap = vessel.auto_pilot
     ap.reference_frame = vessel.orbit.body.reference_frame
@@ -30,51 +30,46 @@ def AutoLanding(tolerance_coef: float = 1.1):
     beta = conn.add_stream(getattr, vessel.flight(), 'sideslip_angle')
     drag = conn.add_stream(getattr, vessel.flight(), 'drag')
 
-    tgt_h_1 = 12000
+    tgt_h_1 = 20000
     tgt_h_2 = 5000
-    tgt_hor_speed = 10
     hor_mod = 1 #for the cosine
 
     while True:
-        if srf_altitude() < tgt_h_1 and ver_speed() < -1:
+        if srf_altitude() < tgt_h_1*tolerance_coef and ver_speed() < -1:
             break
         time.sleep(2)
 
-    printTime('Initiate auto landing at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
+    printTime(Name + ' Initiate auto landing at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
     ap.engage()
-
-    #First do some horizonal deceleration
-    while True:
-        ap.target_direction = (0, -vel()[1], -vel()[2])
-        throttle = (math.sqrt(hor_speed()) - math.sqrt(tgt_hor_speed))/math.sqrt(hor_speed())
-        if throttle < 0:
-            throttle = 0
-        ctrl.throttle = throttle
-        if hor_speed() < tgt_hor_speed*tolerance_coef:
-            ctrl.throttle = 0
-            break
-        time.sleep(0.1)
-
-    printTime('Horizonal deceleration finished at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
     #Find a proper height to start vertical deceleration
     while True:
         vessel_height = CoM_adj(vessel)
-        tgt_h_2 = (ver_speed()**2)*tolerance_coef/(2*vessel.available_thrust/vessel.mass-2*g()) + vessel_height
+        hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
+        tgt_h_2 = (ver_speed()**2)*tolerance_coef/(2*hor_mod*vessel.available_thrust/vessel.mass-2*g()) + vessel_height
         ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
         if srf_altitude() < tgt_h_2:
             break
         time.sleep(0.2)
 
-    printTime('Decelerating at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
+    printTime(Name + ' Decelerating at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
     while True:
+        liq_fuel = vessel.resources.amount('LiquidFuel')
         vessel_height = CoM_adj(vessel)
         hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
         ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
+        if srf_altitude() < vessel_height + 0.1/tolerance_coef:
+            ctrl.throttle = 0
+            break
         if ver_speed() > 0:
             throttle = 0
+        elif liq_fuel < 10:
+            throttle = 0
+            if srf_altitude() > vessel_height + 5*tolerance_coef:
+                printTime(Name + ' Insufficient fuel')
+                break
         else:
             #simple physics
             throttle = ((vessel.mass/hor_mod)*(ver_speed()**2/(2*(srf_altitude() - vessel_height)) + g()) - math.sqrt(drag()[0]**2 + drag()[1]**2 + drag()[2]**2))/vessel.available_thrust
@@ -83,15 +78,30 @@ def AutoLanding(tolerance_coef: float = 1.1):
         elif throttle > 1:
             throttle = 1
         ctrl.throttle = throttle
-        if srf_altitude() < vessel_height + 30*tolerance_coef:
-            ctrl.gear = True
-        if srf_altitude() < vessel_height + 0.1/tolerance_coef:
-            ctrl.throttle = 0
-            break
         time.sleep(0.01)
 
     ap.disengage()
-    printTime('Auto landing completed')
+    printTime(Name + ' Auto landing completed')
 
     conn.close()
+    return
+
+
+def DAL(vessel):
+    '''
+    DECOUPLE & AUTO LANDING: Fire all decoupler and automatically lands all decoupled inactive vessels.
+
+    Current active vessel not included. Auto pilot disengaged. You can start another thread to land this active vessel.
+    '''
+    vessel.auto_pilot.disengage()
+    dec = findDecoupler(vessel)
+    new_vessel = []
+    try:
+        for i in dec:
+            new_vessel.append(i.decoupler.decouple())
+        for i in new_vessel:
+            thread = threading.Thread(target=AutoLanding, args=(i, 'decoupled_' + i.name))
+            thread.start()
+    except Exception as e:
+        print(e.args)
     return
