@@ -60,6 +60,9 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
         vessel_height = CoM_adj(vessel)
         hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
         ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
+        #Uncomment if you need gears
+        # if srf_altitude() < vessel_height + 30*tolerance_coef:
+        #     ctrl.gear = True
         if srf_altitude() < vessel_height + 0.1/tolerance_coef:
             ctrl.throttle = 0
             break
