@@ -1,3 +1,6 @@
+'''
+Automatically lands the active vessel with a tolerance coef.
+'''
 import krpc
 import time
 import math
@@ -8,6 +11,14 @@ from basic import printTime, CoM_adj, findDecoupler
 def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     '''
     Automatically lands the active vessel with a tolerance coef.
+
+    Parameters:
+
+    vessel - vessel
+
+    Name - enter a name for the connection
+
+    tolerance_coef - tolerance of systemic deviation
     '''
     
     printTime(Name + ' AutoLanding ready. Coefficient of tolerance set to {:.4f}'.format(tolerance_coef))
@@ -93,9 +104,13 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
 
 def DAL(vessel, num: int = 1):
     '''
-    DECOUPLE & AUTO LANDING: Fire a number of decouplers and automatically lands all decoupled inactive vessels.
+    DECOUPLE & AUTO LANDING: Fire a number of decouplers and automatically lands all decoupled inactive vessels. Current active vessel not included. Auto pilot disengaged. You can start another thread to land this active vessel.
 
-    Current active vessel not included. Auto pilot disengaged. You can start another thread to land this active vessel.
+    Parameters:
+
+    vessel - vessel
+
+    num - the number of decouplers to fire (searched in a reversed order on the parts tree)
     '''
     vessel.auto_pilot.disengage()
     dec = findDecoupler(vessel)

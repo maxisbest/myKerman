@@ -17,7 +17,7 @@ def printTime(str):
 
 def printStructure():
     '''
-    Print the strucure of this vessel.
+    Print the strucure of active vessel.
     '''
     conn = krpc.connect(name='_temp_')
     vessel = conn.space_center.active_vessel
@@ -45,7 +45,7 @@ def printStructure():
 
 def Launch(sec: int):
     '''
-    Launch this vessel after seconds.
+    Launch active vessel after seconds.
     '''
     conn = krpc.connect(name='Launch')
     vessel = conn.space_center.active_vessel

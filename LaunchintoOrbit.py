@@ -1,3 +1,6 @@
+'''
+Automatically launches active vessel into given orbit.
+'''
 import math
 import time
 import krpc
@@ -47,15 +50,22 @@ def LaunchintoOrbit(tgt_altitude: float, first_stage_altitude: float, first_stag
     first_stage = False
     while True:
 
+        time.sleep(0.1)
         if not first_stage:
             if srf_altitude() > first_stage_altitude:
+
+                #decouple now
                 first_stage = True
+
+                #shut the engine otherwise the decoupled parts will explode
                 ctrl.throttle = 0.0
                 thread = threading.Thread(target = AutoLanding.DAL(vessel, first_stage_dec))
                 thread.start()
                 time.sleep(1)
 
                 ctrl.activate_next_stage()
+
+                #make sure the engine is on
                 eng = findEngine(vessel)
                 eng[-1].active = True
 
