@@ -60,6 +60,7 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
         vessel_height = CoM_adj(vessel)
         hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
         ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
+        ap.wait()
         #Uncomment if you need gears
         # if srf_altitude() < vessel_height + 30*tolerance_coef:
         #     ctrl.gear = True
@@ -90,14 +91,15 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     return
 
 
-def DAL(vessel):
+def DAL(vessel, num: int = 1):
     '''
-    DECOUPLE & AUTO LANDING: Fire all decoupler and automatically lands all decoupled inactive vessels.
+    DECOUPLE & AUTO LANDING: Fire a number of decouplers and automatically lands all decoupled inactive vessels.
 
     Current active vessel not included. Auto pilot disengaged. You can start another thread to land this active vessel.
     '''
     vessel.auto_pilot.disengage()
     dec = findDecoupler(vessel)
+    dec = dec[-num:]
     new_vessel = []
     try:
         for i in dec:
