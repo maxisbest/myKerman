@@ -6,7 +6,7 @@ import time
 import math
 import threading
 
-from basic import printTime, CoM_adj, findDecoupler
+from basic import printTime, CoM_adj
 
 def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     '''
@@ -113,12 +113,12 @@ def DAL(vessel, num: int = 1):
     num - the number of decouplers to fire (searched in a reversed order on the parts tree)
     '''
     vessel.auto_pilot.disengage()
-    dec = findDecoupler(vessel)
+    dec = vessel.parts.decouplers
     dec = dec[-num:]
     new_vessel = []
     try:
         for i in dec:
-            new_vessel.append(i.decoupler.decouple())
+            new_vessel.append(i.decouple())
         for i in new_vessel:
             thread = threading.Thread(target=AutoLanding, args=(i, 'decoupled_' + i.name))
             thread.start()

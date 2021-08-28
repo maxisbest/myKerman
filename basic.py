@@ -73,33 +73,29 @@ def Launch(sec: int):
     conn.close()
 
 
-def findEngine(vessel):
+def jettisonFairing(vessel):
     '''
-    Returns a list of all engines on given vessel.
+    Jettison all fairings. Something is wrong with part.fairing.jettisoned, it always returns true if revert to launch
     '''
-    par = []
-    for i in vessel.parts.all:
-        if i.engine:
-            par.append(i)
-    return par
 
+    # jF = vessel.parts.fairings
+    # for i in jF:
+    #     i.fairing.jettison()
+    # printTime(' ' + vessel.name + ' fairings jettisoned')
 
-def findDecoupler(vessel):
-    '''
-    Returns a list of all decouplers on given vessel.
-    '''
-    par = []
-    for i in vessel.parts.all:
-        if i.decoupler:
-            par.append(i)
-    return par
+    for fairing in vessel.parts.fairings:
+        for module in fairing.part.modules:
+            if 'Fairing' in module.name:
+                #Switch here if not a Chinese version KSP
+                #module.trigger_event('Deploy')
+                module.trigger_event('抛整流罩')
 
 
 def CoM_adj(vessel):
     '''
     Calculates the center of mass adjustment of the given vessel. Returns a float of distance between the CoM of the vessel and the first engine in part tree.
     '''
-    eng = findEngine(vessel)
+    eng = vessel.parts.engines
     box = eng[0].bounding_box(vessel.reference_frame)
     dist = abs(box[0][1])
     return dist

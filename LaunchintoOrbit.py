@@ -7,7 +7,7 @@ import krpc
 import threading
 
 import AutoLanding
-from basic import printTime, printStructure, Launch, findEngine
+from basic import printTime, printStructure, Launch, jettisonFairing
 
 
 def LaunchintoOrbit(tgt_altitude: float, first_stage_altitude: float, first_stage_dec: int, second_stage_dec: int = 1):
@@ -38,9 +38,9 @@ def LaunchintoOrbit(tgt_altitude: float, first_stage_altitude: float, first_stag
 
     atm = vessel.orbit.body.atmosphere_depth
     if tgt_altitude < atm:
-        tgt_altitude = atm
-    turn_start_altitude = 1000
-    turn_end_altitude = 30000
+        tgt_altitude = atm + 1000
+    turn_start_altitude = first_stage_altitude
+    turn_end_altitude = atm
 
     printStructure()
 
@@ -59,19 +59,20 @@ def LaunchintoOrbit(tgt_altitude: float, first_stage_altitude: float, first_stag
 
                 #shut the engine otherwise the decoupled parts will explode
                 ctrl.throttle = 0.0
+                time.sleep(0.2)
                 thread = threading.Thread(target = AutoLanding.DAL(vessel, first_stage_dec))
                 thread.start()
-                time.sleep(1)
 
-                ctrl.activate_next_stage()
+                #Uncomment here if needed
+                #ctrl.activate_next_stage()
+                #eng = vessel.parts.engines
+                #eng[-1].active = True
 
-                #make sure the engine is on
-                eng = findEngine(vessel)
-                eng[-1].active = True
-
+                time.sleep(0.1)
                 ctrl.throttle = 0.5
-                time.sleep(1)
+                time.sleep(3)
                 ctrl.throttle = 1.0
+                ap.engage()
 
         if srf_altitude() > turn_start_altitude and srf_altitude() < turn_end_altitude:
             frac = ((srf_altitude() - turn_start_altitude) /
@@ -88,12 +89,17 @@ def LaunchintoOrbit(tgt_altitude: float, first_stage_altitude: float, first_stag
     ctrl.throttle = 0.25
     while apoapsis() < tgt_altitude:
         pass
+
     printTime('Target apoapsis reached')
+    jettisonFairing(vessel)
     ctrl.throttle = 0.0
 
     thread = threading.Thread(target = AutoLanding.DAL(vessel, second_stage_dec))
     thread.start()
+    ap.engage()
 
+    ctrl.activate_next_stage()
+    time.sleep(0.2)
     printTime('Coasting out of atmosphere')
     while srf_altitude() < atm:
         pass

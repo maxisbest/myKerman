@@ -27,7 +27,7 @@ ctrl.throttle = 0
 ctrl.rcs = False
 time.sleep(1)
 
-thread = threading.Thread(target = AutoLanding.DAL(vessel_0))
+thread = threading.Thread(target = AutoLanding.DAL(vessel_0, 4))
 thread.start()
 
 AutoLanding.AutoLanding(vessel_0, 'Decoupler')
