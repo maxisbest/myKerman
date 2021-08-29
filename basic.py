@@ -19,12 +19,16 @@ def printStructure():
     '''
     Print the strucure of active vessel.
     '''
+
+    logFile = open('./missionLog.txt', 'a+', encoding='utf-8')
+    logConsole = sys.stdout
     conn = krpc.connect(name='_temp_')
     vessel = conn.space_center.active_vessel
     root = vessel.parts.root
     stack = [(root, 0)]
     experiment_parts = []
     printTime('Mission begins')
+    sys.stdout = logFile
     print('Structure of ' + vessel.name + ':')
     while stack:
         part, depth = stack.pop()
@@ -41,6 +45,7 @@ def printStructure():
             print(i.name)
 
     conn.close()
+    sys.stdout = logConsole
 
 
 def Launch(sec: int):
@@ -96,6 +101,6 @@ def CoM_adj(vessel):
     Calculates the center of mass adjustment of the given vessel. Returns a float of distance between the CoM of the vessel and the first engine in part tree.
     '''
     eng = vessel.parts.engines
-    box = eng[0].bounding_box(vessel.reference_frame)
+    box = eng[0].part.bounding_box(vessel.reference_frame)
     dist = abs(box[0][1])
     return dist

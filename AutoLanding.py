@@ -29,7 +29,7 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     ap.reference_frame = vessel.orbit.body.reference_frame
 
     ctrl.sas = False
-    ctrl.rcs = True
+    ctrl.rcs = False
     ctrl.throttle = 0
 
     srf_altitude = conn.add_stream(getattr, vessel.flight(), 'surface_altitude')
@@ -45,20 +45,32 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     tgt_h_2 = 5000
     hor_mod = 1 #for the cosine
 
+    ap.engage()
+
     while True:
+        ap.target_direction = (0, -vel()[1], -vel()[2])
         if srf_altitude() < tgt_h_1*tolerance_coef and ver_speed() < -1:
             break
-        time.sleep(2)
+        time.sleep(1)
 
     printTime(Name + ' Initiate auto landing at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
-    ap.engage()
+    while True:
+        if hor_speed() < 30:
+            break
+        time.sleep(0.1)
+        ap.target_direction = (0, -vel()[1], -vel()[2])
+        throttle = (math.sqrt(hor_speed()) - 5)/math.sqrt(hor_speed())
+        if throttle > 1:
+            throttle = 1
+        elif throttle < 0:
+            throttle = 0
+        ctrl.throttle = throttle
 
     #Find a proper height to start vertical deceleration
     while True:
         vessel_height = CoM_adj(vessel)
-        hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
-        tgt_h_2 = (ver_speed()**2)*tolerance_coef/(2*hor_mod*vessel.available_thrust/vessel.mass-2*g()) + vessel_height
+        tgt_h_2 = (ver_speed()**2)*tolerance_coef/(2*vessel.available_thrust/vessel.mass-2*g()) + vessel_height
         ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
         if srf_altitude() < tgt_h_2:
             break
@@ -71,7 +83,6 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
         vessel_height = CoM_adj(vessel)
         hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
         ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
-        ap.wait()
         #Uncomment if you need gears
         # if srf_altitude() < vessel_height + 30*tolerance_coef:
         #     ctrl.gear = True
@@ -120,7 +131,7 @@ def DAL(vessel, num: int = 1):
         for i in dec:
             new_vessel.append(i.decouple())
         for i in new_vessel:
-            thread = threading.Thread(target=AutoLanding, args=(i, 'decoupled_' + i.name))
+            thread = threading.Thread(target=AutoLanding, args=(i, 'decoupled_' + i.name, 1.1))
             thread.start()
     except Exception as e:
         print(e.args)
