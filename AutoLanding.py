@@ -48,7 +48,7 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     ap.engage()
 
     while True:
-        ap.target_direction = (0, -vel()[1], -vel()[2])
+        ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
         if srf_altitude() < tgt_h_1*tolerance_coef and ver_speed() < -1:
             break
         time.sleep(1)
@@ -56,16 +56,19 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
     printTime(Name + ' Initiate auto landing at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
     while True:
-        if hor_speed() < 30:
+        if hor_speed() < 10:
+            ctrl.throttle = 0
             break
+        ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
         time.sleep(0.1)
-        ap.target_direction = (0, -vel()[1], -vel()[2])
-        throttle = (math.sqrt(hor_speed()) - 5)/math.sqrt(hor_speed())
+        throttle = (math.sqrt(hor_speed()) - 3)/math.sqrt(hor_speed())
         if throttle > 1:
             throttle = 1
         elif throttle < 0:
             throttle = 0
         ctrl.throttle = throttle
+
+    printTime(Name + ' Horizonal decelerating finished at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
     #Find a proper height to start vertical deceleration
     while True:
@@ -76,19 +79,25 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
             break
         time.sleep(0.2)
 
-    printTime(Name + ' Decelerating at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
+    printTime(Name + ' Vertical ecelerating at height of {:.2f} with vertical speed of {:.2f} and horizonal speed of {:.2f}'.format(srf_altitude(), ver_speed(), hor_speed()))
 
     while True:
         liq_fuel = vessel.resources.amount('LiquidFuel')
         vessel_height = CoM_adj(vessel)
         hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
-        ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
-        #Uncomment if you need gears
-        # if srf_altitude() < vessel_height + 30*tolerance_coef:
-        #     ctrl.gear = True
-        if srf_altitude() < vessel_height + 0.1/tolerance_coef:
-            ctrl.throttle = 0
-            break
+
+        if srf_altitude() < vessel_height + 300*tolerance_coef:
+            ctrl.gear = True
+            if srf_altitude() < vessel_height + 30*tolerance_coef:
+                ap.target_pitch_and_heading = (90, 90)
+                if srf_altitude() < vessel_height + 0.2/tolerance_coef:
+                    ctrl.throttle = 0
+                    break
+            else:
+                ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
+        else:
+            ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
+
         if ver_speed() > 0:
             throttle = 0
         elif liq_fuel < 10:
@@ -99,6 +108,7 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
         else:
             #simple physics
             throttle = ((vessel.mass/hor_mod)*(ver_speed()**2/(2*(srf_altitude() - vessel_height)) + g()) - math.sqrt(drag()[0]**2 + drag()[1]**2 + drag()[2]**2))/vessel.available_thrust
+
         if throttle < 0:
             throttle = 0
         elif throttle > 1:
