@@ -85,18 +85,13 @@ def AutoLanding(vessel, Name: str, tolerance_coef: float = 1.1):
         liq_fuel = vessel.resources.amount('LiquidFuel')
         vessel_height = CoM_adj(vessel)
         hor_mod = math.cos(math.radians(alpha()))*math.cos(math.radians(beta()))
+        ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
 
         if srf_altitude() < vessel_height + 300*tolerance_coef:
             ctrl.gear = True
-            if srf_altitude() < vessel_height + 30*tolerance_coef:
-                ap.target_pitch_and_heading = (90, 90)
-                if srf_altitude() < vessel_height + 0.2/tolerance_coef:
+            if srf_altitude() < vessel_height + 0.2/tolerance_coef:
                     ctrl.throttle = 0
                     break
-            else:
-                ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
-        else:
-            ap.target_direction = (-vel()[0], -vel()[1], -vel()[2])
 
         if ver_speed() > 0:
             throttle = 0
